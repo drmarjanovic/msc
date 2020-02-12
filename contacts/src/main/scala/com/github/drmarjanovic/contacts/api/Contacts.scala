@@ -5,6 +5,7 @@ import com.github.drmarjanovic.contacts.domain.Filter._
 import com.github.drmarjanovic.contacts.domain.{ ContactService, Filter }
 import com.github.drmarjanovic.contacts.protocol._
 import com.github.drmarjanovic.contacts.{ AppEnv, AppTask }
+import com.github.drmarjanovic.tracing.HTTP_STATUS
 import io.opentracing.propagation.Format.Builtin.{ HTTP_HEADERS => HttpHeadersFormat }
 import io.opentracing.propagation.{ TextMap, TextMapAdapter }
 import io.opentracing.tag.Tags.{ HTTP_METHOD, HTTP_URL }
