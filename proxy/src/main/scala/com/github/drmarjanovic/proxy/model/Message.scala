@@ -11,5 +11,5 @@ final case class Message(
   @GQLDescription("Body of the message.")
   body: String,
   @GQLDescription("Identifies the date and time when the message was sent.")
-  sentAt: String // FIXME - Use DateTime
+  sentAt: DateTime
 )

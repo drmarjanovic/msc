@@ -1,6 +1,11 @@
 package com.github.drmarjanovic.proxy
 
+import caliban.schema.Schema
+import org.joda.time.DateTime
+
 package object model {
+
+  implicit val dateTimeSchema: Schema[Any, DateTime] = Schema.stringSchema.contramap(_.toString)
 
   // Queries arguments
   final case class ContactsArgs(filters: List[ContactFilter], offset: Long = 0, limit: Long = 10)

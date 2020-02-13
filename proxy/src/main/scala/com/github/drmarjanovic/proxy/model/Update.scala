@@ -12,5 +12,5 @@ final case class Update(
   @GQLDescription("Message used in the update.")
   message: String,
   @GQLDescription("Identifies the date and time when the update was created.")
-  createdAt: String // FIXME - Use DateTime
+  createdAt: DateTime
 )

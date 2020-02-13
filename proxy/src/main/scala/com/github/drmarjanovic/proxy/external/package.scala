@@ -1,9 +1,9 @@
 package com.github.drmarjanovic.proxy
 
-import com.github.drmarjanovic.contacts.protocol.{ContactCollectionResponse, ContactResponseData}
-import com.github.drmarjanovic.messages.protocol.{MessageCollectionResponse, MessageResponseData}
+import com.github.drmarjanovic.contacts.protocol.{ ContactCollectionResponse, ContactResponseData }
+import com.github.drmarjanovic.messages.protocol.{ MessageCollectionResponse, MessageResponseData }
 import com.github.drmarjanovic.proxy.model._
-import com.github.drmarjanovic.updates.protocol.{UpdateCollectionResponse, UpdateResponse, UpdateResponseData}
+import com.github.drmarjanovic.updates.protocol.{ UpdateCollectionResponse, UpdateResponse, UpdateResponseData }
 import com.github.drmarjanovic.users.protocol.UserResponse
 import org.joda.time.DateTime
 
@@ -33,7 +33,7 @@ package object external {
       Message(
         id = data.id,
         body = attrs.body,
-        sentAt = DateTime.parse(attrs.sentAt).toString()
+        sentAt = DateTime.parse(attrs.sentAt)
       )
     }
   }
@@ -49,7 +49,7 @@ package object external {
         id = data.id,
         to = UpdateType.of(attrs.`type`),
         message = attrs.message,
-        createdAt = DateTime.parse(attrs.createdAt).toString()
+        createdAt = DateTime.parse(attrs.createdAt)
       )
     }
   }
