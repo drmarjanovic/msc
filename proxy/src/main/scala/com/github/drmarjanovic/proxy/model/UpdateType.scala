@@ -14,6 +14,14 @@ sealed trait UpdateType {
 
 object UpdateType {
 
+  def of(value: String): UpdateType =
+    value match {
+      case "VipContacts"        => VIPS
+      case "ContactsWithEmail"  => WITH_EMAIL
+      case "ContactsWithMobile" => WITH_MOBILE
+      case _                    => ALL
+    }
+
   case object ALL extends UpdateType
 
   case object VIPS extends UpdateType

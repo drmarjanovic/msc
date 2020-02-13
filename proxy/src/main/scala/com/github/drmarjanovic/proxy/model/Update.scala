@@ -8,7 +8,7 @@ final case class Update(
   @GQLDescription("Unique identifier of the update.")
   id: Long,
   @GQLDescription("Represents update specified subscribers type.")
-  to: String, // FIXME - Use better type,
+  to: UpdateType,
   @GQLDescription("Message used in the update.")
   message: String,
   @GQLDescription("Identifies the date and time when the update was created.")
