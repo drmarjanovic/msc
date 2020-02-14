@@ -16,8 +16,8 @@ Following routes are exposed:
 
   ```json
   {
-	"email": "example@email.com",
-	"password": "example"
+	  "email": "example@email.com",
+	  "password": "example"
   }
   ```
 
