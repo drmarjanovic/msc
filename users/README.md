@@ -1,6 +1,6 @@
 # Users
 
-A part of microservicese-based infrastracture that provides managing users. 
+A part of microservices-based infrastructure that provides managing users. 
 Currently, it is in charge for user authenticating and retrieving data for it through `proxy` service.
 
 ### Specification

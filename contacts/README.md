@@ -1,6 +1,6 @@
 # Contacts
 
-A part of microservicese-based infrastracture that provides managing contacts. 
+A part of microservices-based infrastructure that provides managing contacts. 
 Currently, it is in charge for retrieving contacts through `proxy` service and subscribers required by `updates` service.
 
 ### Specification
@@ -16,7 +16,7 @@ Following routes are exposed:
   - `filter[vip]`     indicates wheter VIP contacts should be returned or not
   - `filter[email]`   indicates wheter contacts with email should be returned or not
   - `filter[mobile]`  indicates wheter contacts with mobile should be returned or not
-  - `page[limit]`     represents limit in offset-based pagination strategy.
+  - `page[limit]`     represents limit in offset-based pagination strategy
   - `page[offset]`    represents offset in offset-based pagination strategy
 
 

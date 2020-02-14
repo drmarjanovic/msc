@@ -1,6 +1,6 @@
 # Messages
 
-A part of microservicese-based infrastracture that provides managing messages. 
+A part of microservices-based infrastructure that provides managing messages. 
 Currently, it is in charge for sending message through `updates` service and retrieving data through `proxy` service.
 
 ### Specification
@@ -27,6 +27,8 @@ Following routes are exposed:
 
 ##### Retrieving messages for specified contact
 - `GET    api/users/:userId/contacts/:contactId/messages`
+  - `page[limit]`     represents limit in offset-based pagination strategy
+  - `page[offset]`    represents offset in offset-based pagination strategy
 
 
 ### How to run?
