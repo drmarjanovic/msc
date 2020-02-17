@@ -1,8 +1,9 @@
 package com.github.drmarjanovic
 
 import io.opentracing.Span
-import io.opentracing.tag.{ BooleanTag, IntTag, StringTag, Tags }
-import zio.Task
+import io.opentracing.tag.{BooleanTag, IntTag, StringTag, Tags}
+import com.github.drmarjanovic.tracing.TracingHelper._
+import zio.{IO, Task, ZIO}
 
 package object tracing {
 
@@ -27,6 +28,13 @@ package object tracing {
     def failed(): Unit = {
       span.setTag(Tags.ERROR.getKey, true)
       span.finish()
+    }
+
+    def failed(t: Throwable): IO[Throwable, Nothing] = {
+      span.log(now(), s"Failed due: ${t.getMessage}.")
+      span.setTag(Tags.ERROR.getKey, true)
+      span.finish()
+      ZIO.fail(t)
     }
   }
 

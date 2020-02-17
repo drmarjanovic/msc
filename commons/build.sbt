@@ -4,7 +4,7 @@ lazy val api =
   project
     .in(file("modules/api"))
     .settings(
-      version := "1.0.2",
+      version := "1.0.3",
       organization := "com.github.drmarjanovic.commons",
       name := "api"
     )
@@ -17,7 +17,7 @@ lazy val tracing =
   project
     .in(file("modules/tracing"))
     .settings(
-      version := "1.0.1",
+      version := "1.0.2",
       organization := "com.github.drmarjanovic.commons",
       name := "tracing"
     )

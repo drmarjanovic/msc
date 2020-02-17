@@ -14,8 +14,8 @@ Contains common code for HTTP API. We have defined several entities respecting [
 
 Contains common code for tracing. One of the most important parts is [Jaeger][www:jaeger] tracer setup. It is kept on single place, and changing tracing vendor is very simple. Beside that, it contains often used methods as `extractTracingHeaders`, etc. Also, it contains extensions for `Span` (`failed()` method) and handling failures for `Option` datatype.
 
-[api-module]: https://img.shields.io/badge/api--module-1.0.2-blue
-[tracing-module]: https://img.shields.io/badge/tracing--module-1.0.1-blue
+[api-module]: https://img.shields.io/badge/api--module-1.0.3-blue
+[tracing-module]: https://img.shields.io/badge/tracing--module-1.0.2-blue
 
 [www:jaeger]: https://www.jaegertracing.io/
 [www:json-api]: https://jsonapi.org/
