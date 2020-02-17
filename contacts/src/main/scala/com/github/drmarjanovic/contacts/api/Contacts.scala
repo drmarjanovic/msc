@@ -5,7 +5,7 @@ import com.github.drmarjanovic.contacts.domain.Filter._
 import com.github.drmarjanovic.contacts.domain.{ ContactService, Filter }
 import com.github.drmarjanovic.contacts.protocol._
 import com.github.drmarjanovic.contacts.{ AppEnv, AppTask }
-import com.github.drmarjanovic.tracing.HTTP_STATUS
+import com.github.drmarjanovic.tracing._
 import io.opentracing.propagation.Format.Builtin.{ HTTP_HEADERS => HttpHeadersFormat }
 import io.opentracing.propagation.{ TextMap, TextMapAdapter }
 import io.opentracing.tag.Tags.{ HTTP_METHOD, HTTP_URL }
@@ -38,7 +38,7 @@ final class Contacts(service: ContactService) extends Routes {
                  )
           _        = span.setTag(HTTP_URL, req.uri.renderString)
           _        = span.setTag(HTTP_METHOD, GET.name)
-          contacts <- service.findByUserId(userId, filters, offset, limit)(span)
+          contacts <- service.findByUserId(userId, filters, offset, limit)(span).catchAll(span.failed)
           _        = span.log(s"Successfully returned contacts with filters [${filters.mkString("; ")}] for user $userId.")
           _        = span.setTag(HTTP_STATUS, Ok.code)
           _        = span.finish()

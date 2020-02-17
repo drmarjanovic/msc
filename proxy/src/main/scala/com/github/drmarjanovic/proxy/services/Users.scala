@@ -24,10 +24,10 @@ final class Users(conf: UsersServiceConfig) {
       _       <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
       headers <- extractTracingHeaders(buffer)
       url     <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
-      res     <- UsersProxy.getUser(id, url, headers).map(_.body)
-      a       <- res.fold(_ => ZIO.fail("Failed retrieving user."), r => ZIO.succeed(Some(r.toDomain)))
+      res     <- UsersProxy.getUser(id, url, headers).catchAll(span.failed).map(_.body)
+      user    <- res.fold(span.failed, r => ZIO.succeed(Some(r.toDomain)))
       _       = span.finish()
-    } yield a).foldM(_ => URIO.succeed(None), b => URIO.succeed(b))
+    } yield user).foldM(_ => URIO.succeed(None), URIO.succeed)
 
   def auth(email: String, password: String): URIO[AppEnv, Option[BearerToken]] =
     (for {
@@ -37,9 +37,9 @@ final class Users(conf: UsersServiceConfig) {
       _       <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
       headers <- extractTracingHeaders(buffer)
       url     <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
-      res     <- UsersProxy.auth(email, password, url, headers).map(_.body)
+      res     <- UsersProxy.auth(email, password, url, headers).catchAll(span.failed).map(_.body)
       _       = span.finish()
-      a       <- res.fold(_ => ZIO.fail("Failed auth."), r => ZIO.succeed(Some(BearerToken(token = r.token))))
-    } yield a).foldM(_ => URIO.succeed(None), b => URIO.succeed(b))
+      token   <- res.fold(span.failed, r => ZIO.succeed(Some(BearerToken(token = r.token))))
+    } yield token).foldM(_ => URIO.succeed(None), URIO.succeed)
 
 }

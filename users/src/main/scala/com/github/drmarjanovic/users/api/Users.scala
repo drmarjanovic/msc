@@ -34,7 +34,7 @@ final class Users(secret: ApplicationSecret, service: UserService) extends Route
                  )
           _         = span.setTag(HTTP_URL, req.uri.renderString)
           _         = span.setTag(HTTP_METHOD, POST.name)
-          maybeUser <- service.findByEmailAndPassword(spec.email, spec.password)(span)
+          maybeUser <- service.findByEmailAndPassword(spec.email, spec.password)(span).catchAll(span.failed)
           bearer <- maybeUser.foldZ(WrongCredentials("You've provided wrong credentials."))(span).map { u =>
                      span.log(now(), s"User ${spec.email} successfully authenticated.")
                      Bearer.of(secret, u)
@@ -54,7 +54,7 @@ final class Users(secret: ApplicationSecret, service: UserService) extends Route
                  )
           _         = span.setTag(HTTP_URL, req.uri.renderString)
           _         = span.setTag(HTTP_METHOD, GET.name)
-          maybeUser <- service.one(userId)(span)
+          maybeUser <- service.one(userId)(span).catchAll(span.failed)
           user <- maybeUser.foldZ(EntityNotFound("User", userId))(span).map { u =>
                    span.log(now(), s"User ${u.email} successfully retrieved.")
                    u

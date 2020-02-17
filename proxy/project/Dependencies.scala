@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
 
   private object Commons {
-    val Tracing  = "1.0.1"
+    val Tracing  = "1.0.2"
     val Contacts = "1.0.0"
     val Updates  = "1.0.0"
     val Users    = "1.0.0"

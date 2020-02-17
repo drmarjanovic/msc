@@ -18,15 +18,15 @@ final class Messages(conf: MessagesServiceConfig) {
 
   def get(userId: UserId, contactId: ContactId): URIO[AppEnv, List[Message]] =
     (for {
-      span    <- ZIO.accessM[AppEnv](_.telemetry.root("messages"))
-      _       = span.setTag(GRAPHQL_OPERATION_NAME, "contact/messages")
-      buffer  <- UIO.succeed(new TextMapAdapter(mutable.Map.empty[String, String].asJava))
-      _       <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
-      headers <- extractTracingHeaders(buffer)
-      url     <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
-      res     <- MessagesProxy.getMessages(userId, contactId, url, headers).map(_.body)
-      a       <- res.fold(_ => ZIO.fail("Failed retrieving messages."), r => ZIO.succeed(r.toDomain))
-      _       = span.finish()
-    } yield a).foldM(_ => URIO.succeed(List.empty), b => URIO.succeed(b))
+      span     <- ZIO.accessM[AppEnv](_.telemetry.root("messages"))
+      _        = span.setTag(GRAPHQL_OPERATION_NAME, "contact/messages")
+      buffer   <- UIO.succeed(new TextMapAdapter(mutable.Map.empty[String, String].asJava))
+      _        <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
+      headers  <- extractTracingHeaders(buffer)
+      url      <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
+      res      <- MessagesProxy.getMessages(userId, contactId, url, headers).catchAll(span.failed).map(_.body)
+      messages <- res.fold(span.failed, r => ZIO.succeed(r.toDomain))
+      _        = span.finish()
+    } yield messages).foldM(_ => URIO.succeed(List.empty), URIO.succeed)
 
 }

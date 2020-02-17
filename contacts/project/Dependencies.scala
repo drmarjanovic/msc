@@ -3,8 +3,8 @@ import sbt._
 object Dependencies {
 
   private object Commons {
-    val Api     = "1.0.2"
-    val Tracing = "1.0.1"
+    val Api     = "1.0.3"
+    val Tracing = "1.0.2"
   }
 
   private object Versions {

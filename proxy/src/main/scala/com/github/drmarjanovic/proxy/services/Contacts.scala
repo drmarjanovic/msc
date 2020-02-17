@@ -18,15 +18,15 @@ final class Contacts(conf: ContactsServiceConfig) {
 
   def get(userId: UserId, filters: List[ContactFilter], offset: Long, limit: Long): URIO[AppEnv, List[Contact]] =
     (for {
-      span    <- ZIO.accessM[AppEnv](_.telemetry.root("contacts"))
-      _       = span.setTag(GRAPHQL_OPERATION_NAME, "contacts")
-      buffer  <- UIO.succeed(new TextMapAdapter(mutable.Map.empty[String, String].asJava))
-      _       <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
-      headers <- extractTracingHeaders(buffer)
-      url     <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
-      res     <- ContactsProxy.getContacts(userId, url, headers).map(_.body)
-      _       = span.finish()
-      a       <- res.fold(_ => ZIO.fail("Failed retrieving contacts."), r => ZIO.succeed(r.toDomain))
-    } yield a).foldM(_ => URIO.succeed(List.empty), b => URIO.succeed(b))
+      span     <- ZIO.accessM[AppEnv](_.telemetry.root("contacts"))
+      _        = span.setTag(GRAPHQL_OPERATION_NAME, "contacts")
+      buffer   <- UIO.succeed(new TextMapAdapter(mutable.Map.empty[String, String].asJava))
+      _        <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
+      headers  <- extractTracingHeaders(buffer)
+      url      <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
+      res      <- ContactsProxy.getContacts(userId, url, headers).catchAll(span.failed).map(_.body)
+      contacts <- res.fold(span.failed, r => ZIO.succeed(r.toDomain))
+      _        = span.finish()
+    } yield contacts).foldM(_ => URIO.succeed(List.empty), URIO.succeed)
 
 }
