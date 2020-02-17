@@ -1,7 +1,7 @@
 package com.github.drmarjanovic.updates.api
 
 import com.github.drmarjanovic.commons.api._
-import com.github.drmarjanovic.commons.api.errors.{ MalformedRequest, ServiceCommunicationFailure }
+import com.github.drmarjanovic.commons.api.errors.{ MalformedRequest, MalformedResponse }
 import com.github.drmarjanovic.tracing.TracingHelper._
 import com.github.drmarjanovic.tracing._
 import com.github.drmarjanovic.updates.config.Config.ApiConfig
@@ -18,7 +18,7 @@ import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import sttp.model.Uri
 import zio.interop.catz._
-import zio.{ Task, UIO, ZIO }
+import zio.{ UIO, ZIO }
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
@@ -42,7 +42,7 @@ final class Updates(service: UpdateService, api: ApiConfig) extends Routes {
                  )
           _       = span.setTag(HTTP_URL, req.uri.renderString)
           _       = span.setTag(HTTP_METHOD, GET.name)
-          updates <- service.findByUserId(userId, offset, limit)(span)
+          updates <- service.findByUserId(userId, offset, limit)(span).catchAll(span.failed)
           _       = span.log(now(), s"Successfully returned updates for user $userId.")
           _       = span.setTag(HTTP_STATUS, Ok.code)
           _       = span.finish()
@@ -61,19 +61,20 @@ final class Updates(service: UpdateService, api: ApiConfig) extends Routes {
 
           for {
             url <- ZIO.fromEither(Uri.safeApply(api.contacts.host, api.contacts.port))
-            res <- ContactsProxy.getContacts(userId, url, params, headers)
-            ids <- res.body.fold(_ => {
-                    span.failed()
-                    ZIO.fail(ServiceCommunicationFailure `with` "contacts")
-                  }, r => ZIO.succeed(r.data.map(_.id)))
+            res <- ContactsProxy.getContacts(userId, url, params, headers).catchAll(span.failed)
+            ids <- res.body.fold(e => span.failed(MalformedResponse(e.getMessage)), r => ZIO.succeed(r.data.map(_.id)))
           } yield ids
         }
 
-        def sendMessageTo(contactIds: List[Long], body: String, headers: Map[String, String]) =
+        def sendMessageTo(contactIds: List[Long], body: String, headers: Map[String, String])(implicit span: Span) =
           for {
             url <- ZIO.fromEither(Uri.safeApply(api.messages.host, api.messages.port))
             sent <- ZIO.foreachPar(contactIds)(
-                     id => MessagesProxy.sendMessage(userId, id, body, url, headers).map(_.code)
+                     id =>
+                       MessagesProxy
+                         .sendMessage(userId, id, body, url, headers)
+                         .map(_.code)
+                         .catchAll(e => span.failed(MalformedResponse(e.getMessage)))
                    )
           } yield sent
 
@@ -83,25 +84,22 @@ final class Updates(service: UpdateService, api: ApiConfig) extends Routes {
                    _.telemetry
                      .spanFrom[TextMap](HttpHeadersFormat, new TextMapAdapter(headers.asJava), "create update")
                  )
-          _          = span.setTag(HTTP_URL, req.uri.renderString)
-          _          = span.setTag(HTTP_METHOD, POST.name)
-          spec       <- req.as[UpdateRequest]
-          attrs      = spec.data.attributes
-          buffer     <- UIO.succeed(new TextMapAdapter(mutable.Map.empty[String, String].asJava))
-          _          <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
-          headers    <- extractTracingHeaders(buffer)
-          updateType = UpdateType.fromReq(attrs.`type`)
-          contacts   <- retrieveContacts(updateType, headers)(span)
-          _          = span.log(now(), s"Successfully retrieved update subscribers for user $userId.")
-          _          <- sendMessageTo(contacts, attrs.message, headers)
-          saved      <- service.save(userId, updateType, attrs.message)(span)
-          maybeUpdate <- saved.fold(e => {
-                          span.failed()
-                          Task.fail(e)
-                        }, id => service.one(id)(span))
-          update <- maybeUpdate.foldZ(MalformedRequest("Failed retrieving saved update."))(span)
-          _      = span.setTag(HTTP_STATUS, Ok.code)
-          _      = span.finish()
+          _           = span.setTag(HTTP_URL, req.uri.renderString)
+          _           = span.setTag(HTTP_METHOD, POST.name)
+          spec        <- req.as[UpdateRequest]
+          attrs       = spec.data.attributes
+          buffer      <- UIO.succeed(new TextMapAdapter(mutable.Map.empty[String, String].asJava))
+          _           <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
+          headers     <- extractTracingHeaders(buffer)
+          updateType  = UpdateType.fromReq(attrs.`type`)
+          contacts    <- retrieveContacts(updateType, headers)(span)
+          _           = span.log(now(), s"Successfully retrieved update subscribers for user $userId.")
+          _           <- sendMessageTo(contacts, attrs.message, headers)(span)
+          saved       <- service.save(userId, updateType, attrs.message)(span)
+          maybeUpdate <- saved.fold(e => span.failed(e), id => service.one(id)(span).catchAll(span.failed))
+          update      <- maybeUpdate.foldZ(MalformedRequest("Failed retrieving saved update."))(span)
+          _           = span.setTag(HTTP_STATUS, Ok.code)
+          _           = span.finish()
         } yield update.toResponse
 
         handleFailures(zio)

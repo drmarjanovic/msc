@@ -1,15 +1,15 @@
 package com.github.drmarjanovic.proxy.services
 
-import com.github.drmarjanovic.proxy.{AppEnv, UserId}
 import com.github.drmarjanovic.proxy.config.Config.UpdatesServiceConfig
 import com.github.drmarjanovic.proxy.external._
-import com.github.drmarjanovic.proxy.model.{Update, UpdateType}
+import com.github.drmarjanovic.proxy.model.{ Update, UpdateType }
+import com.github.drmarjanovic.proxy.{ AppEnv, UserId }
 import com.github.drmarjanovic.tracing.TracingHelper._
 import com.github.drmarjanovic.tracing._
-import io.opentracing.propagation.Format.Builtin.{HTTP_HEADERS => HttpHeadersFormat}
+import io.opentracing.propagation.Format.Builtin.{ HTTP_HEADERS => HttpHeadersFormat }
 import io.opentracing.propagation.TextMapAdapter
 import sttp.model.Uri
-import zio.{UIO, URIO, ZIO}
+import zio.{ UIO, URIO, ZIO }
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
@@ -24,10 +24,10 @@ final class Updates(conf: UpdatesServiceConfig) {
       _       <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
       headers <- extractTracingHeaders(buffer)
       url     <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
-      res     <- UpdatesProxy.getUpdates(userId, url, headers).map(_.body)
+      res     <- UpdatesProxy.getUpdates(userId, url, headers).catchAll(span.failed).map(_.body)
       _       = span.finish()
-      a       <- res.fold(_ => ZIO.fail("Failed retrieving updates."), r => ZIO.succeed(r.toDomain))
-    } yield a).foldM(_ => URIO.succeed(List.empty), b => URIO.succeed(b))
+      updates <- res.fold(span.failed, r => ZIO.succeed(r.toDomain))
+    } yield updates).foldM(_ => URIO.succeed(List.empty), URIO.succeed)
 
   def create(userId: UserId, to: UpdateType, body: String): URIO[AppEnv, Option[Update]] =
     (for {
@@ -37,9 +37,9 @@ final class Updates(conf: UpdatesServiceConfig) {
       _       <- ZIO.accessM[AppEnv](_.telemetry.inject(HttpHeadersFormat, buffer, span))
       headers <- extractTracingHeaders(buffer)
       url     <- ZIO.fromEither(Uri.safeApply(conf.host, conf.port))
-      res     <- UpdatesProxy.sendUpdate(userId, body, to, url, headers).map(_.body)
+      res     <- UpdatesProxy.sendUpdate(userId, body, to, url, headers).catchAll(span.failed).map(_.body)
       _       = span.finish()
-      a       <- res.fold(_ => ZIO.fail("Failed retrieving update."), r => ZIO.succeed(Some(r.toDomain)))
-    } yield a).foldM(_ => URIO.succeed(None), b => URIO.succeed(b))
+      created <- res.fold(span.failed, r => ZIO.succeed(Some(r.toDomain)))
+    } yield created).foldM(_ => URIO.succeed(None), URIO.succeed)
 
 }

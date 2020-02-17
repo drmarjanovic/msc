@@ -11,8 +11,8 @@ import io.opentracing.propagation.{ TextMap, TextMapAdapter }
 import io.opentracing.tag.Tags.{ HTTP_METHOD, HTTP_URL }
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
+import zio.ZIO
 import zio.interop.catz._
-import zio.{ Task, ZIO }
 
 import scala.jdk.CollectionConverters._
 
@@ -35,7 +35,7 @@ final class Messages(service: MessageService) extends Routes {
                  )
           _        = span.setTag(HTTP_URL, req.uri.renderString)
           _        = span.setTag(HTTP_METHOD, GET.name)
-          messages <- service.findByUserIdAndContactId(userId, contactId, offset, limit)(span)
+          messages <- service.findByUserIdAndContactId(userId, contactId, offset, limit)(span).catchAll(span.failed)
           _        = span.setTag(HTTP_STATUS, Ok.code)
           _        = span.finish()
         } yield messages.withLinks(req.uri, offset, limit)
@@ -48,17 +48,14 @@ final class Messages(service: MessageService) extends Routes {
           span <- ZIO.accessM[AppEnv](
                    _.telemetry.spanFrom(HttpHeadersFormat, new TextMapAdapter(headers.asJava), "send message")
                  )
-          _     = span.setTag(HTTP_URL, req.uri.renderString)
-          _     = span.setTag(HTTP_METHOD, POST.name)
-          spec  <- req.as[MessageRequest]
-          saved <- service.save(userId, contactId, spec.data.attributes.body)(span)
-          maybeMessage <- saved.fold(e => {
-                           span.failed()
-                           Task.fail(e)
-                         }, id => service.one(id)(span))
-          message <- maybeMessage.foldZ(MalformedRequest("Failed retrieving saved message."))(span)
-          _       = span.setTag(HTTP_STATUS, Ok.code)
-          _       = span.finish()
+          _            = span.setTag(HTTP_URL, req.uri.renderString)
+          _            = span.setTag(HTTP_METHOD, POST.name)
+          spec         <- req.as[MessageRequest]
+          saved        <- service.save(userId, contactId, spec.data.attributes.body)(span).catchAll(span.failed)
+          maybeMessage <- saved.fold(e => span.failed(e), id => service.one(id)(span).catchAll(span.failed))
+          message      <- maybeMessage.foldZ(MalformedRequest("Failed retrieving saved message."))(span)
+          _            = span.setTag(HTTP_STATUS, Ok.code)
+          _            = span.finish()
         } yield message.toResponse
 
         handleFailures(zio)
